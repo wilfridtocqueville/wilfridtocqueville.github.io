@@ -554,6 +554,38 @@ TABS.forEach(([id,label])=>{
 
 function isPctInd(name){return /Pénétration|Part d'Audience|Structure/.test(name);}
 
+/* ---------- Audiences hors univers (depuis les synthèses nationales) ---------- */
+function normZone(z){
+  // « 72 - SARTHE » et « SARTHE » désignent la même zone
+  return String(z).replace(/^\d{1,3}\s*-\s*/,'').trim().toUpperCase();
+}
+const RESID = (RAW.residuel && RAW.residuel[ACTIVE]) ? RAW.residuel[ACTIVE] : [];
+// zones déjà couvertes par l'export par univers de la station
+const ZONES_PRINCIPALES = (function(){
+  const set=new Set();
+  const ind=(D.recap&&D.recap.indicators)?D.recap.indicators[Object.keys(D.recap.indicators)[0]]:[];
+  (ind||[]).forEach(z=>{ if(z.station_presente) set.add(normZone(z.zone)); });
+  return set;
+})();
+// Total des auditeurs hors univers principal, pour la vague affichée.
+// On ne somme QUE les départements : les agglomérations y sont déjà incluses
+// (Lyon dans le Rhône, Le Mans dans la Sarthe...), les additionner ferait
+// un double compte.
+function residuelHorsUnivers(){
+  const idx=waveIdx();
+  const last=idx[idx.length-1], prev=idx.length>=2?idx[idx.length-2]:null;
+  let total=0, totalPrev=0, zones=[];
+  RESID.forEach(z=>{
+    if(z.type!=='departement') return;                    // evite le double compte agglo/departement
+    if(ZONES_PRINCIPALES.has(normZone(z.zone))) return;   // deja compte dans l'univers principal
+    const serie=z.vals['Audience cumulée en Centaines']||[];
+    const v=serie[last];
+    if(v!=null && v!==0){ total+=v; zones.push(z.zone); }
+    if(prev!=null){ const p=serie[prev]; if(p!=null) totalPrev+=p; }
+  });
+  return {total, totalPrev, zones};
+}
+
 /* ================= SYNTHÈSE ================= */
 const EV = D.evolution.sections;
 const acEns = EV['Audience cumulée en Centaines'].find(x=>x.cible==='Ensemble 13 ans et plus');
@@ -574,16 +606,43 @@ function kpiCard(lbl,vals,unit,fmtFn,mode){
     <div class="prev">précédent : ${fmtFn(v1)} ${unit}</div>
   </div>`;
 }
+const HORS = residuelHorsUnivers();
+function kpiCardAudience(){
+  const vals=pick(acEns);
+  const base2=vals[vals.length-1], base1=vals[vals.length-2];
+  // Audience globale = univers principal + territoires hors univers.
+  // Les deux vagues sont majorees de la meme facon pour que l'evolution reste comparable.
+  const v2=(base2==null?null:base2+HORS.total);
+  const v1=(base1==null?null:base1+(HORS.totalPrev||0));
+  const dv=delta(v1,v2);
+  const detail = HORS.total ?
+    `<div class="prev" style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">`+
+      `dont ${fmtCount(base2)} sur l'univers principal`+
+      `<br><span style="color:var(--accent)">+ ${fmtCount(HORS.total)} hors univers</span>`+
+      ` <span style="opacity:.7">(${HORS.zones.join(' · ')})</span></div>` : '';
+  return `<div class="kpi">
+    <div class="lbl">Audience cumulée${HORS.total?' globale':''}</div>
+    <div class="val">${fmtCount(v2)}<span class="u"> auditeurs</span></div>
+    <div class="delta ${cls(dv)}"><span class="arrow">${arr(dv)}</span>${dv==null?'–':(dv>0?'+':'')+fmtCount(dv)}</div>
+    <div class="prev">précédent : ${fmtCount(v1)} auditeurs</div>
+    ${detail}
+  </div>`;
+}
 document.getElementById('kpiRow').innerHTML =
-  kpiCard('Audience cumulée', pick(acEns), 'auditeurs', v=>fmtCount(v), 'abs') +
+  kpiCardAudience() +
   kpiCard("Part d'audience", pick(pdaEns), '', v=>fr1(v*100)+' %', 'pctpt') +
   kpiCard("Durée d'écoute / auditeur", pick(deaEns), 'min', v=>fmt(v), 'abs');
 
 (function(){
   const ac=pick(acEns);
   const v1=ac[ac.length-2], v2=ac[ac.length-1];
+  // audience globale (univers principal + hors univers), cohérente avec la carte KPI
+  const g1=(v1==null?null:v1+(HORS.totalPrev||0)), g2=(v2==null?null:v2+HORS.total);
+  const mentionHors = HORS.total
+    ? ` Ce total inclut <b>${fmtCount(HORS.total)}</b> auditeurs mesurés hors de l'univers principal (${HORS.zones.join(', ')}).`
+    : '';
   document.getElementById('synthLead').innerHTML =
-    `Sur l'ensemble 13 ans et plus, ${SNAME} passe de <b>${fmtCount(v1)}</b> à <b>${fmtCount(v2)}</b> auditeurs (audience cumulée) sur la dernière vague, avec une durée d'écoute de <b>${fmt(lastVal(deaEns))}&nbsp;min</b> par auditeur.${WAVEMODE==='3'?' Les graphiques ci-dessous montrent la trajectoire sur trois vagues.':''}`;
+    `Sur l'ensemble 13 ans et plus, ${SNAME} passe de <b>${fmtCount(g1)}</b> à <b>${fmtCount(g2)}</b> auditeurs (audience cumulée) sur la dernière vague, avec une durée d'écoute de <b>${fmt(lastVal(deaEns))}&nbsp;min</b> par auditeur.${mentionHors}${WAVEMODE==='3'?' Les graphiques ci-dessous montrent la trajectoire sur trois vagues.':''}`;
 })();
 
 /* highlights : hausses/baisses sur un an */
@@ -894,19 +953,6 @@ function renderGeo(){
 /* Source : synthèses nationales Médiamétrie (départements + agglomérations).
    Montre TOUS les territoires où la station est mesurée, y compris les
    audiences marginales absentes de l'export par univers. */
-const RESID = (RAW.residuel && RAW.residuel[ACTIVE]) ? RAW.residuel[ACTIVE] : [];
-// zones déjà présentes dans l'onglet « par zone » (pour distinguer le « hors zone »)
-const ZONES_PRINCIPALES = (function(){
-  const set=new Set();
-  const ind=REC.indicators[Object.keys(REC.indicators)[0]]||[];
-  ind.forEach(z=>{ if(z.station_presente) set.add(normZone(z.zone)); });
-  return set;
-})();
-function normZone(z){
-  // « 72 - SARTHE » et « SARTHE » désignent la même zone
-  return String(z).replace(/^\d{1,3}\s*-\s*/,'').trim().toUpperCase();
-}
-
 const resIndicSel=document.getElementById('resIndic');
 let resType=UIS.resType||'all', resScope=UIS.resScope||'hors', resChart, resDone=false;
 (function(){
@@ -952,7 +998,11 @@ function renderResiduel(){
 
   const mul=isP?100:isMin?1:100;
   const fmtV=v=>v==null?'–':isP?fr1(v*100)+' %':isMin?fmt(v)+' min':fmtCount(v);
-  const totalAud=data.reduce((t,x)=>t+((x.last!=null&&!isP&&!isMin)?x.last:0),0);
+  // Somme sans double compte : les agglomerations sont incluses dans leur
+  // departement (Lyon dans le Rhone, Le Mans dans la Sarthe...). On ne somme
+  // donc que les departements.
+  const totalAud=data.reduce((t,x)=>
+    t+((x.type==='departement'&&x.last!=null&&!isP&&!isMin)?x.last:0),0);
   const nbHors=RESID.filter(z=>!ZONES_PRINCIPALES.has(normZone(z.zone))).length;
 
   document.getElementById('resKpis').innerHTML=
@@ -962,7 +1012,7 @@ function renderResiduel(){
     `<div class="prev">sur ${RESID.length} mesurés au total</div></div>`+
     (!isP&&!isMin&&totalAud>0?`<div class="kpi"><div class="lbl">Audience cumulée affichée</div>`+
       `<div class="val">${fmtCount(totalAud)}<span class="u"> auditeurs</span></div>`+
-      `<div class="prev">${L[L.length-1]} · somme des territoires listés</div></div>`:'');
+      `<div class="prev">${L[L.length-1]} · somme des départements listés<br>(les agglomérations sont comprises dans leur département)</div></div>`:'');
 
   document.getElementById('resTitle').textContent=`${SNAME} — ${ind}`;
   document.getElementById('resSub').textContent=
