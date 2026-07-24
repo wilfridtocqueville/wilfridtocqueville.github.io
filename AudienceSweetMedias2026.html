@@ -823,7 +823,7 @@ function drawEvolution(){
   if(evSort==='delta') withD.sort((a,b)=>(b.d??-1e9)-(a.d??-1e9));
   else if(evSort==='v2') withD.sort((a,b)=>(b.last??-1e9)-(a.last??-1e9));
   else withD.sort((a,b)=>a.cible.localeCompare(b.cible,'fr'));
-  const top=withD.slice(0,22), mul=isP?100:1;
+  const top=withD.slice(0,22), mul=isP?100:isMin?1:100;
   const datasets=L.map((lab,wi)=>({
     label:lab, backgroundColor:cols[wi], borderRadius:3, barPercentage:.86, categoryPercentage:.72,
     data:top.map(x=>x.vals[wi]==null?null:x.vals[wi]*mul),
@@ -834,7 +834,7 @@ function drawEvolution(){
     data:{labels:top.map(x=>x.cible),datasets},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'top',labels:{boxWidth:12,padding:14}},
-        tooltip:{callbacks:{label:c=>{const v=c.parsed.x;return c.dataset.label+' : '+(v==null?'–':isP?fr1(v)+' %':isMin?fmt(v)+' min':fmtCount(v));}}}},
+        tooltip:{callbacks:{label:c=>{const v=c.parsed.x;return c.dataset.label+' : '+(v==null?'–':isP?fr1(v)+' %':isMin?fmt(v)+' min':fmt(v));}}}},
       scales:{x:{grid:{color:C.line},title:{display:true,text:isP?'%':isMin?'minutes':'auditeurs'}},
         y:{grid:{display:false},ticks:{font:{size:policeLibelles(top.length)},autoSkip:false}}}}
   });
@@ -1074,7 +1074,7 @@ function renderGeo(){
     type:'bar', data:{labels:data.map(x=>x.zone),datasets},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'top',labels:{boxWidth:12,padding:14}},
-        tooltip:{callbacks:{label:c=>{const v=c.parsed.x;return c.dataset.label+' : '+(v==null?'–':isP?fr1(v)+' %':isMin?fmt(v)+' min':fmtCount(v));}}}},
+        tooltip:{callbacks:{label:c=>{const v=c.parsed.x;return c.dataset.label+' : '+(v==null?'–':isP?fr1(v)+' %':isMin?fmt(v)+' min':fmt(v));}}}},
       scales:{x:{grid:{color:C.line},title:{display:true,text:isP?'%':isMin?'minutes':'auditeurs'}},
         y:{grid:{display:false},ticks:{font:{size:policeLibelles(data.length)},autoSkip:false}}}}
   });
