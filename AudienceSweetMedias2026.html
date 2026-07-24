@@ -989,14 +989,28 @@ function renderConcurrence(){
     `Classement sur ${L[L.length-1]} · évolution 1 an (${L[L.length-2]} → ${L[L.length-1]}) en bout de barre`+
     (tronque?` · ${lim} premières sur ${totalRadios} radios mesurées`:` · ${totalRadios} radios mesurées`);
   const evoPct=data.map(x=>deltaPctRel(x.prev,x.last));
+  // Etiquettes en bout de barre : d'abord la valeur de l'indicateur, puis
+  // l'evolution sur un an (verte si hausse, rouge si baisse).
+  const valeurTexte = v => v==null ? '–'
+      : isP ? fr1(v*100)+' %'
+      : isMin ? fmt(v)+' min'
+      : fmtCount(v);
   const evoLabelPlugin={id:'cpEvoLabels',afterDatasetsDraw(chart){
     const {ctx}=chart, meta=chart.getDatasetMeta(0);
-    ctx.save(); ctx.font='600 11px Inter, sans-serif'; ctx.textBaseline='middle';
+    ctx.save(); ctx.textBaseline='middle'; ctx.textAlign='left';
     meta.data.forEach((barEl,i)=>{
+      let x = barEl.x + 8;
+      // 1) la valeur
+      const val = valeurTexte(data[i].last);
+      ctx.font='600 11px Inter, sans-serif';
+      ctx.fillStyle = data[i].ref ? C.sig : C.ink;
+      ctx.fillText(val, x, barEl.y);
+      x += ctx.measureText(val).width + 10;
+      // 2) l'evolution
       const dr=evoPct[i]; if(dr==null||!isFinite(dr)) return;
       const up=dr>0, flat=Math.abs(dr)<0.0005;
-      ctx.fillStyle=flat?C.dim:up?C.up:C.down; ctx.textAlign='left';
-      ctx.fillText((up?'▲ +':flat?'▬ ':'▼ ')+fr1(Math.abs(dr*100))+' %', barEl.x+8, barEl.y);
+      ctx.fillStyle=flat?C.dim:up?C.up:C.down;
+      ctx.fillText((up?'▲ +':flat?'▬ ':'▼ ')+fr1(Math.abs(dr*100))+' %', x, barEl.y);
     });
     ctx.restore();
   }};
@@ -1008,14 +1022,14 @@ function renderConcurrence(){
       {label:L[L.length-1],data:data.map(x=>x.last==null?null:x.last*mul),
         backgroundColor:data.map(x=>x.ref?C.sig:C.accent),borderRadius:3}]},
     plugins:[evoLabelPlugin],
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:12}},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:20}},
       plugins:{legend:{display:false},
         tooltip:{callbacks:{label:c=>{const v=c.parsed.x,i=c.dataIndex,dr=evoPct[i];
           const base=c.dataset.label+' : '+(v==null?'–':isP?fr1(v)+' %':isMin?fmt(v)+' min':fmt(v));
           const prev=data[i].prev==null?'–':isP?fr1(data[i].prev*100)+' %':isMin?fmt(data[i].prev)+' min':fmt(data[i].prev*mul);
           const evo=dr==null||!isFinite(dr)?'':`  (évol. ${dr>0?'+':''}${fr1(dr*100)} %)`;
           return [base, `${L[L.length-2]} : ${prev}${evo}`];}}}},
-      scales:{x:{grid:{color:C.line},suggestedMax:maxV*1.18,title:{display:true,text:isP?'%':isMin?'minutes':'auditeurs'}},
+      scales:{x:{grid:{color:C.line},suggestedMax:maxV*1.38,title:{display:true,text:isP?'%':isMin?'minutes':'auditeurs'}},
         y:{grid:{display:false},ticks:{font:{size:policeLibelles(data.length)},autoSkip:false}}}}
   });
   const t=document.getElementById('cpTable');
