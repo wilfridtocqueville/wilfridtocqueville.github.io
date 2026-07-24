@@ -117,12 +117,15 @@
   .chart-h.auto{height:auto;min-height:280px}
 
   /* Controls */
-  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
+  .controls{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
   select,.seg button{font-family:var(--font);font-size:13px}
   select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;
     padding:9px 12px;cursor:pointer;font-weight:500}
   select:focus-visible{outline:2px solid var(--accent)}
   .ctl-lbl{font-size:11px;color:var(--mut);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px}
+  /* Le libelle et son controle restent solidaires : ils ne peuvent pas etre
+     separes par un retour a la ligne quand la barre de controles deborde. */
+  .ctl{display:inline-flex;align-items:center;gap:8px}
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .seg button{background:var(--panel2);color:var(--mut);border:none;padding:9px 14px;cursor:pointer;font-weight:600}
   .seg button.active{background:var(--sig);color:#0d1117}
@@ -217,14 +220,12 @@
     <h2 class="sec">Évolution par cible</h2>
     <p class="lead">Comparaison des deux vagues pour chaque cible sociodémographique, sur l'indicateur choisi. Le tri met en avant les plus fortes hausses et baisses.</p>
     <div class="controls">
-      <span class="ctl-lbl">Indicateur</span>
-      <select id="evIndic"></select>
-      <span class="ctl-lbl">Tri</span>
-      <div class="seg" id="evSort">
+      <div class="ctl"><span class="ctl-lbl">Indicateur</span><select id="evIndic"></select></div>
+      <div class="ctl"><span class="ctl-lbl">Tri</span><div class="seg" id="evSort">
         <button data-s="delta" class="active">Évolution</button>
         <button data-s="v2">Vague récente</button>
         <button data-s="alpha">Alphabétique</button>
-      </div>
+      </div></div>
     </div>
     <div class="card">
       <div class="chart-h auto"><canvas id="evChart"></canvas></div>
@@ -261,8 +262,7 @@
     <h2 class="sec">Profil de l'auditoire</h2>
     <p class="lead" id="profLead">Structure de l'audience cumulée : quel poids chaque cible représente dans l'auditoire total, et comment ce poids a évolué.</p>
     <div class="controls">
-      <span class="ctl-lbl">Famille de cibles</span>
-      <select id="profFam"></select>
+      <div class="ctl"><span class="ctl-lbl">Famille de cibles</span><select id="profFam"></select></div>
     </div>
     <div class="grid2">
       <div class="card">
@@ -283,15 +283,13 @@
     <h2 class="sec" id="geoSecTitle">Par zone</h2>
     <p class="lead" id="geoLead">Audience dans chaque territoire où la station est présente : régions, départements et agglomérations. Choisissez l'indicateur et le type de zone pour comparer les niveaux et les évolutions entre vagues.</p>
     <div class="controls">
-      <span class="ctl-lbl">Indicateur</span>
-      <select id="geoIndic"></select>
-      <span class="ctl-lbl">Type de zone</span>
-      <div class="seg" id="geoType">
+      <div class="ctl"><span class="ctl-lbl">Indicateur</span><select id="geoIndic"></select></div>
+      <div class="ctl"><span class="ctl-lbl">Type de zone</span><div class="seg" id="geoType">
         <button data-t="region" class="active">Régions</button>
         <button data-t="departement">Départements</button>
         <button data-t="agglo">Agglomérations</button>
         <button data-t="all">Toutes</button>
-      </div>
+      </div></div>
     </div>
     <div class="kpis" id="geoKpis"></div>
     <div class="card">
@@ -309,21 +307,17 @@
     <h2 class="sec">Positionnement concurrentiel</h2>
     <p class="lead" id="cpLead">Face aux autres stations, par zone géographique. Choisissez un indicateur et une zone pour comparer les niveaux et les évolutions.</p>
     <div class="controls">
-      <span class="ctl-lbl">Indicateur</span>
-      <select id="cpIndic"></select>
-      <span class="ctl-lbl">Zone</span>
-      <select id="cpZone"></select>
-      <span class="ctl-lbl">Affichage</span>
-      <div class="seg" id="cpTop">
+      <div class="ctl"><span class="ctl-lbl">Indicateur</span><select id="cpIndic"></select></div>
+      <div class="ctl"><span class="ctl-lbl">Zone</span><select id="cpZone"></select></div>
+      <div class="ctl"><span class="ctl-lbl">Affichage</span><div class="seg" id="cpTop">
         <button data-n="20" class="active">Top 20</button>
         <button data-n="50">Top 50</button>
         <button data-n="0">Toutes</button>
-      </div>
-      <span class="ctl-lbl">Évolutions</span>
-      <div class="seg" id="cpEvo">
+      </div></div>
+      <div class="ctl"><span class="ctl-lbl">Évolutions</span><div class="seg" id="cpEvo">
         <button data-v="1" class="active">Afficher</button>
         <button data-v="0">Masquer</button>
-      </div>
+      </div></div>
     </div>
     <div class="card">
       <h3 id="cpTitle"></h3>
@@ -339,15 +333,12 @@
     <h2 class="sec">Profil par tranche horaire</h2>
     <p class="lead" id="phLead">Qui écoute, et à quel moment de la journée. Structure de l'auditoire par cible, pour chaque tranche horaire — l'apport spécifique de l'étude Editorial.</p>
     <div class="controls">
-      <span class="ctl-lbl">Indicateur</span>
-      <select id="phIndic"></select>
-      <span class="ctl-lbl">Vue</span>
-      <div class="seg" id="phMode">
+      <div class="ctl"><span class="ctl-lbl">Indicateur</span><select id="phIndic"></select></div>
+      <div class="ctl"><span class="ctl-lbl">Vue</span><div class="seg" id="phMode">
         <button data-m="tranche" class="active">Par tranche</button>
         <button data-m="cible">Par cible</button>
-      </div>
-      <span class="ctl-lbl" id="phSelLbl">Tranche</span>
-      <select id="phSel"></select>
+      </div></div>
+      <div class="ctl"><span class="ctl-lbl" id="phSelLbl">Tranche</span><select id="phSel"></select></div>
     </div>
     <div class="card">
       <h3 id="phTitle"></h3>
@@ -364,19 +355,16 @@
     <h2 class="sec" id="resSecTitle">Audiences résiduelles</h2>
     <p class="lead" id="resLead">Tous les territoires où la station est mesurée en France, y compris hors zone de diffusion habituelle. Source : synthèses nationales Médiamétrie (départements et agglomérations).</p>
     <div class="controls">
-      <span class="ctl-lbl">Indicateur</span>
-      <select id="resIndic"></select>
-      <span class="ctl-lbl">Territoires</span>
-      <div class="seg" id="resType">
+      <div class="ctl"><span class="ctl-lbl">Indicateur</span><select id="resIndic"></select></div>
+      <div class="ctl"><span class="ctl-lbl">Territoires</span><div class="seg" id="resType">
         <button data-t="all" class="active">Tous</button>
         <button data-t="departement">Départements</button>
         <button data-t="agglo">Agglomérations</button>
-      </div>
-      <span class="ctl-lbl">Affichage</span>
-      <div class="seg" id="resScope">
+      </div></div>
+      <div class="ctl"><span class="ctl-lbl">Affichage</span><div class="seg" id="resScope">
         <button data-s="hors" class="active">Hors zone principale</button>
         <button data-s="tous">Tout</button>
-      </div>
+      </div></div>
     </div>
     <div class="kpis" id="resKpis"></div>
     <div class="card">
