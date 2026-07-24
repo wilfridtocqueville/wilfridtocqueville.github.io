@@ -319,6 +319,11 @@
         <button data-n="50">Top 50</button>
         <button data-n="0">Toutes</button>
       </div>
+      <span class="ctl-lbl">Évolutions</span>
+      <div class="seg" id="cpEvo">
+        <button data-v="1" class="active">Afficher</button>
+        <button data-v="0">Masquer</button>
+      </div>
     </div>
     <div class="card">
       <h3 id="cpTitle"></h3>
@@ -445,6 +450,7 @@ const UIS = {
   cpInd: hp.get('ci') || null,     // concurrence : indicateur
   cpZone: hp.get('cz') || null,    // concurrence : zone
   cpTop: hp.get('ct') || '20',     // concurrence : nombre de radios affichees
+  cpEvo: hp.get('ce') || '1',      // concurrence : afficher les evolutions
   resInd: hp.get('ri') || null,    // residuel : indicateur
   resType: hp.get('rt') || 'all',
   resScope: hp.get('rs') || 'hors',
@@ -467,6 +473,7 @@ function syncHash(){
   if(UIS.resType && UIS.resType!=='all') p.set('rt',UIS.resType);
   if(UIS.resScope && UIS.resScope!=='hors') p.set('rs',UIS.resScope);
   if(UIS.cpTop && UIS.cpTop!=='20') p.set('ct',UIS.cpTop);
+  if(UIS.cpEvo==='0') p.set('ce','0');
   if(UIS.phInd) p.set('hi',UIS.phInd);
   if(UIS.phMode && UIS.phMode!=='tranche') p.set('hm',UIS.phMode);
   if(UIS.phSel) p.set('hs',UIS.phSel);
@@ -488,6 +495,7 @@ function hashFor(over){
   if(UIS.resType && UIS.resType!=='all') p.set('rt',UIS.resType);
   if(UIS.resScope && UIS.resScope!=='hors') p.set('rs',UIS.resScope);
   if(UIS.cpTop && UIS.cpTop!=='20') p.set('ct',UIS.cpTop);
+  if(UIS.cpEvo==='0') p.set('ce','0');
   if(UIS.phInd) p.set('hi',UIS.phInd);
   if(UIS.phMode && UIS.phMode!=='tranche') p.set('hm',UIS.phMode);
   if(UIS.phSel) p.set('hs',UIS.phSel);
@@ -949,6 +957,14 @@ setSelIfPresent(cpZoneSel, UIS.cpZone);
 cpIndicSel.onchange=()=>{ UIS.cpInd=cpIndicSel.value; syncHash(); renderConcurrence(); };
 cpZoneSel.onchange=()=>{ UIS.cpZone=cpZoneSel.value; syncHash(); renderConcurrence(); };
 let cpTop = ['20','50','0'].includes(UIS.cpTop) ? UIS.cpTop : '20';
+let cpEvo = (UIS.cpEvo === '0') ? '0' : '1';
+document.querySelectorAll('#cpEvo button').forEach(b=>{
+  b.classList.toggle('active', b.dataset.v===cpEvo);
+  b.onclick=()=>{
+    document.querySelectorAll('#cpEvo button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); cpEvo=b.dataset.v; UIS.cpEvo=cpEvo; syncHash(); renderConcurrence();
+  };
+});
 document.querySelectorAll('#cpTop button').forEach(b=>{
   b.classList.toggle('active', b.dataset.n===cpTop);
   b.onclick=()=>{
@@ -988,6 +1004,11 @@ function renderConcurrence(){
   document.getElementById('cpSub').textContent=
     `Classement sur ${L[L.length-1]} · évolution 1 an (${L[L.length-2]} → ${L[L.length-1]}) en bout de barre`+
     (tronque?` · ${lim} premières sur ${totalRadios} radios mesurées`:` · ${totalRadios} radios mesurées`);
+  if(cpEvo!=='1'){
+    document.getElementById('cpSub').textContent=
+      `Classement sur ${L[L.length-1]} · valeur en bout de barre · évolution au survol`+
+      (tronque?` · ${lim} premières sur ${totalRadios} radios mesurées`:` · ${totalRadios} radios mesurées`);
+  }
   const evoPct=data.map(x=>deltaPctRel(x.prev,x.last));
   // Etiquettes en bout de barre : d'abord la valeur de l'indicateur, puis
   // l'evolution sur un an (verte si hausse, rouge si baisse).
@@ -1006,7 +1027,8 @@ function renderConcurrence(){
       ctx.fillStyle = data[i].ref ? C.sig : C.ink;
       ctx.fillText(val, x, barEl.y);
       x += ctx.measureText(val).width + 10;
-      // 2) l'evolution
+      // 2) l'evolution (masquable ; elle reste visible dans l'info-bulle)
+      if(cpEvo!=='1') return;
       const dr=evoPct[i]; if(dr==null||!isFinite(dr)) return;
       const up=dr>0, flat=Math.abs(dr)<0.0005;
       ctx.fillStyle=flat?C.dim:up?C.up:C.down;
@@ -1029,7 +1051,7 @@ function renderConcurrence(){
           const prev=data[i].prev==null?'–':isP?fr1(data[i].prev*100)+' %':isMin?fmt(data[i].prev)+' min':fmt(data[i].prev*mul);
           const evo=dr==null||!isFinite(dr)?'':`  (évol. ${dr>0?'+':''}${fr1(dr*100)} %)`;
           return [base, `${L[L.length-2]} : ${prev}${evo}`];}}}},
-      scales:{x:{grid:{color:C.line},suggestedMax:maxV*1.38,title:{display:true,text:isP?'%':isMin?'minutes':'auditeurs'}},
+      scales:{x:{grid:{color:C.line},suggestedMax:maxV*(cpEvo==='1'?1.38:1.18),title:{display:true,text:isP?'%':isMin?'minutes':'auditeurs'}},
         y:{grid:{display:false},ticks:{font:{size:policeLibelles(data.length)},autoSkip:false}}}}
   });
   const t=document.getElementById('cpTable');
